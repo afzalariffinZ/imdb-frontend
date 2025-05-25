@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Styles */
+body {
+  @apply antialiased transition-colors duration-300;
+}
+
+/* Dark Theme (Default) */
+html.dark body {
+  @apply bg-theme-bg-dark text-theme-light-gray;
+}
+html.dark .themed-text { @apply text-theme-light-gray; }
+html.dark .themed-text-secondary { @apply text-theme-medium-gray; }
+html.dark .themed-bg-card { @apply bg-theme-dark-gray; }
+html.dark .themed-border { @apply border-theme-dark-gray; }
+
+
+/* Light Theme (if you implement a toggle) */
+html.light body {
+  @apply bg-theme-bg-light text-theme-bg-dark;
+}
+html.light .themed-text { @apply text-theme-bg-dark; }
+html.light .themed-text-secondary { @apply text-gray-600; } /* Adjust for light mode */
+html.light .themed-bg-card { @apply bg-white; }
+html.light .themed-border { @apply border-gray-200; }
+
+
+/* Custom scrollbar (optional, for aesthetics in dark mode) */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  @apply bg-theme-dark-gray;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  @apply bg-theme-red rounded;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-red-700; /* Lighter red */
+}
