@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from './components/Navbar'; // Adjust the path as necessary
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Import Router components
+import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
-import PopularSection from './components/PopularSection';
-import YourBackgroundGif from './assets/index_background.gif'; // Import your GIF
+// import PopularSection from './components/PopularSection'; // PopularSection might be part of HeroSection or its own route
+import MoviesPage from './components/MovieComponents/MoviePage'; // Import the new MoviesPage
+import YourBackgroundGif from './assets/index_background.gif';
 
 function App() {
-  const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
     const htmlElement = document.documentElement;
     if (isDarkMode) {
       htmlElement.classList.add('dark');
       htmlElement.classList.remove('light');
+      document.body.className = 'bg-theme-bg-dark text-theme-light-gray'; // Apply base theme to body
     } else {
       htmlElement.classList.add('light');
       htmlElement.classList.remove('dark');
+      document.body.className = 'bg-theme-bg-light text-theme-bg-dark'; // Apply base theme to body
     }
   }, [isDarkMode]);
 
@@ -22,39 +26,50 @@ function App() {
     setIsDarkMode(prevMode => !prevMode);
   };
 
-  const popularItems = [
-    { id: 1, title: "Movie Placeholder 1", type: "movie", imageUrl: null },
-    { id: 2, title: "Series Placeholder", type: "tv", imageUrl: null /* "/path/to/your/series-poster.jpg" */ },
-    { id: 3, title: "Person Placeholder", type: "person", imageUrl: null /* "/path/to/your/person-poster.jpg" */ },
-  ];
+  // popularItems might be fetched within PopularSection or passed differently if PopularSection is part of HeroSection now
+  // const popularItems = [
+  //   { id: 1, title: "Movie Placeholder 1", type: "movie", imageUrl: null },
+  //   { id: 2, title: "Series Placeholder", type: "tv", imageUrl: null },
+  //   { id: 3, title: "Person Placeholder", type: "person", imageUrl: null },
+  // ];
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Background GIF Placeholder */}
-      <div className="fixed inset-0 z-[-1] overflow-hidden">
-        {/* Replace with your actual GIF */}
-        <img src={YourBackgroundGif} alt="Background" className="w-full h-full object-cover opacity-10 dark:opacity-5" />
-        <div className="w-full h-full bg-black flex items-center justify-center">
-           <p className="text-theme-medium-gray text-xl opacity-20">Background GIF Area</p>
+    <Router> {/* Wrap everything in Router */}
+      <div className="flex flex-col min-h-screen">
+        {/* Background GIF */}
+        <div className="fixed inset-0 z-[-10] overflow-hidden"> {/* Ensure it's behind everything */}
+          <img 
+            src={YourBackgroundGif} 
+            alt="Background" 
+            className="w-full h-full object-cover opacity-20 dark:opacity-10" // Adjusted opacity
+          />
         </div>
-      </div>
-      
-      <Navbar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-      
-      <main className="flex-grow relative z-0"> {/* z-0 so navbar (z-50) is above */}
-        <HeroSection />
-        <PopularSection items={popularItems} />
-      </main>
+        
+        <Navbar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+        
+        <main className="flex-grow relative z-10 pt-16"> {/* Add pt-16 if navbar is sticky and fixed height (h-16) */}
+          <Routes> {/* Define your routes */}
+            <Route path="/" element={
+              <>
+                <HeroSection />
+                {/* <PopularSection items={popularItems} /> You might include PopularSection here or make it part of HeroSection */}
+              </>
+            } />
+            <Route path="/movies" element={<MoviesPage />} />
+            {/* Add more routes like /tv, /celebs, /movie/:id etc. later */}
+          </Routes>
+        </main>
 
-      <footer className="py-6 text-center text-sm themed-text-secondary relative z-0">
-        © {new Date().getFullYear()} IMDb2. A fictional site.
-        <div className="mt-1">
-          <a href="#" className="hover:text-theme-yellow mx-2">About</a> |
-          <a href="#" className="hover:text-theme-yellow mx-2">Contact</a> |
-          <a href="#" className="hover:text-theme-yellow mx-2">Privacy</a>
-        </div>
-      </footer>
-    </div>
+        <footer className="py-6 text-center text-sm themed-text-secondary relative z-10">
+          © {new Date().getFullYear()} IMDb2. A fictional site.
+          <div className="mt-1">
+            <a href="#" className="hover:text-theme-yellow mx-2">About</a> |
+            <a href="#" className="hover:text-theme-yellow mx-2">Contact</a> |
+            <a href="#" className="hover:text-theme-yellow mx-2">Privacy</a>
+          </div>
+        </footer>
+      </div>
+    </Router>
   );
 }
 

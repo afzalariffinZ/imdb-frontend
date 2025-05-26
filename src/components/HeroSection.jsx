@@ -1,39 +1,32 @@
-import React from 'react';
+// src/components/HeroSection.jsx (or wherever it is)
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+
 // OPTION 1: If your logo is in src/assets and you want Vite to process it
 import ImdbLargeLogo from '../assets/IMDB_logo.png'; // <-- REPLACE with your actual logo file name
 
 const HeroSection = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      // Change 'search' to 'title' for the React Router URL
+      navigate(`/movies?title=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
   return (
     <section className="py-20 md:py-24 text-center relative">
       <div className="container mx-auto px-6">
         {/* IMDb Logo Image */}
         <div className="mb-6 md:mb-8 flex justify-center">
-          {/* 
-            OPTION 1: Using an imported image (recommended if in src/assets)
-            Replace 'ImdbLargeLogo' with your imported variable name.
-            Replace 'alt' text as appropriate.
-          */}
           <img 
             src={ImdbLargeLogo} 
             alt="IMDb Logo" 
             className="h-20 md:h-28 w-auto" // Adjust height/width as needed
           />
-
-          {/* 
-            OPTION 2: If your logo is in the 'public' folder (e.g., public/imdb-hero-logo.png)
-            It will be served from the root of your site.
-            Uncomment this and comment out Option 1 if you use this method.
-          */}
-          
-          {/* 
-            OPTION 3: Placeholder if you don't have the image yet but want the space
-            Remove this if you use Option 1 or 2.
-          */}
-          {/* <div className="bg-theme-yellow inline-block px-8 py-3 shadow-lg">
-            <h1 className="text-5xl md:text-7xl font-black text-black uppercase tracking-wider">
-              IMDb
-            </h1>
-          </div> */}
         </div>
 
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold themed-text leading-tight mb-4">
@@ -44,14 +37,16 @@ const HeroSection = () => {
         </p>
 
         {/* Search Bar */}
-        <form className="max-w-xl mx-auto" onSubmit={(e) => e.preventDefault()}>
+        <form className="max-w-xl mx-auto" onSubmit={handleSearchSubmit}> {/* Use handleSearchSubmit */}
           <div className="flex items-center themed-bg-card border-2 border-theme-dark-gray dark:border-theme-medium-gray focus-within:border-theme-yellow rounded-md shadow-md overflow-hidden">
             <input
               type="search"
               name="search"
-              id="search"
+              id="hero-search" // Give it a unique ID if needed
               className="flex-grow p-3 md:p-4 text-base md:text-lg themed-text placeholder-theme-medium-gray bg-transparent focus:outline-none"
               placeholder="Search for Films, Series, People..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             <button
               type="submit"
