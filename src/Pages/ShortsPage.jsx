@@ -1,17 +1,16 @@
 // src/pages/MoviesPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom'; // Make sure this is imported
-import MovieCard from '../MovieComponents/MovieCard';
-import MovieModal from '../MovieComponents/MovieModal';
-import SearchBar from '../MovieComponents/SearchBar';
-import Pagination from '../MovieComponents/Pagination';
+import MovieCard from '../components/MovieComponents/MovieCard'; // Adjust path if MovieCard is elsewhere
+import MovieModal from '../components/MovieComponents/MovieModal';
+import SearchBar from '../components/MovieComponents/SearchBar';
+import Pagination from '../components/MovieComponents/Pagination';
 import CircularProgress from '@mui/material/CircularProgress'; // MUI Spinner
 
 // --- Constants ---
 const MOVIES_PER_PAGE = 8;
 const API_BASE_URL = 'http://localhost:3000'; // Your PHP API base URL
 
-// --- FAKE DATA FOR MODAL ---
 const generateFakePrincipalsForModal = (movieIndex) => {
   const principals = [];
   const directorNconst = `nm${7000000 + movieIndex}d`;
@@ -40,11 +39,11 @@ const generateFakePrincipalsForModal = (movieIndex) => {
 const LoadingIndicator = () => (
   <div className="flex flex-col items-center justify-center py-20">
     <CircularProgress style={{ color: '#FBBF24' }} /> {/* Example color (Tailwind yellow-500) */}
-    <p className="mt-4 themed-text-secondary text-lg">Loading movies...</p>
+    <p className="mt-4 themed-text-secondary text-lg">Loading shorts...</p>
   </div>
 );
 
-const MoviesPage = () => {
+const ShortsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialUrlSearchTerm = searchParams.get('title') || '';
 
@@ -59,6 +58,7 @@ const MoviesPage = () => {
 
   const totalPages = Math.ceil(totalMovieCount / MOVIES_PER_PAGE);
 
+  console.log('movies lengthm', movies.length)
   const fetchMoviesList = useCallback(async (isNewSearchOrPage = false) => {
     if (isNewSearchOrPage) {
         setMovies([]); // Clear previous movies immediately for a new search/page
@@ -75,7 +75,7 @@ const MoviesPage = () => {
       });
       if (searchTerm) queryParams.append('search', searchTerm);
 
-      const response = await fetch(`${API_BASE_URL}/api_movies.php?${queryParams.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/api_shorts.php?${queryParams.toString()}`);
 
       if (!response.ok) {
         let errorText = `HTTP error! status: ${response.status}`;
@@ -186,7 +186,7 @@ const MoviesPage = () => {
   } else if (searchTerm && isLoading) {
     pageTitleContent = <>Searching for "<strong>{searchTerm}</strong>"...</>;
   } else {
-    pageTitleContent = <>Browse Movies ({totalMovieCount > 0 ? totalMovieCount : isLoading ? '' : '0'} total)</>;
+    pageTitleContent = <>Browse Shorts ({totalMovieCount > 0 ? totalMovieCount : isLoading ? '' : '0'} total)</>;
   }
   
   // console.log('MoviesPage isLoading:', isLoading, 'movies.length:', movies.length);
@@ -195,7 +195,7 @@ const MoviesPage = () => {
     <div className="container mx-auto px-2 sm:px-4 py-8 themed-text z-">
       <h1 className="text-3xl sm:text-4xl font-bold text-center mb-6 sm:mb-8">{pageTitleContent}</h1>
 
-      <SearchBar onSearch={handleSearchSubmit} initialTerm={searchTerm} type='movies' />
+      <SearchBar onSearch={handleSearchSubmit} initialTerm={searchTerm} type='short'/>
 
       {isLoading && <LoadingIndicator /> /* Show loader WHENEVER isLoading is true */}
       
@@ -232,7 +232,7 @@ const MoviesPage = () => {
       )}
 
       {selectedMovie && (
-        <MovieModal movie={selectedMovie} onClose={handleCloseMovieModal} type={"movie"} />
+        <MovieModal movie={selectedMovie} onClose={handleCloseMovieModal} type={"short"} />
       )}
 
       <footer className="text-center py-10 mt-10 border-t themed-border-color">
@@ -242,4 +242,4 @@ const MoviesPage = () => {
   );
 };
 
-export default MoviesPage;
+export default ShortsPage;

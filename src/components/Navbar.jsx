@@ -86,7 +86,7 @@ const MobileNavLink = ({ href, children, onClick }) => {
 const Navbar = ({ isDarkMode, toggleTheme }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navItems = ['Home', 'Movies', 'TV Series', 'Shorts', 'Celebs'];
+  const navItems = ['Home', 'Movies', 'Series', 'Shorts', 'Celebs'];
 
   useEffect(() => {
     const handleResize = () => {

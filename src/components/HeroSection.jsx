@@ -11,20 +11,21 @@ const HeroSection = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      // Change 'search' to 'title' for the React Router URL
-      navigate(`/movies?title=${encodeURIComponent(searchTerm.trim())}`);
-    }
+    const trimmed = searchTerm.trim();
+    if (!trimmed) return;
+
+    navigate(`/all?title=${encodeURIComponent(trimmed)}`);
   };
+
 
   return (
     <section className="py-20 md:py-24 text-center relative">
       <div className="container mx-auto px-6">
         {/* IMDb Logo Image */}
         <div className="mb-6 md:mb-8 flex justify-center">
-          <img 
-            src={ImdbLargeLogo} 
-            alt="IMDb Logo" 
+          <img
+            src={ImdbLargeLogo}
+            alt="IMDb Logo"
             className="h-20 md:h-28 w-auto" // Adjust height/width as needed
           />
         </div>

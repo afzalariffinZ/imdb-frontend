@@ -8,6 +8,9 @@ import MoviesPage from './components/MovieComponents/MoviePage'; // Import the n
 import YourBackgroundGif from './assets/index_background.gif';
 import MovieDetailPage from './components/MovieComponents/MovieDetailPage'; // Import MovieDetailPage
 import CelebDetailPage from './components/CelebComponents/CelebDetailPage';
+import SeriesPage from './Pages/SeriesPage';
+import ShortsPage from './Pages/ShortsPage';
+import AllPage from './Pages/AllPage';
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -60,8 +63,12 @@ function App() {
             } />
             <Route path="/movies" element={<MoviesPage />} />
             <Route path="/celebs" element={<CelebsPage />} /> {/* << ADD CELEBS ROUTE */}
-            <Route path="/movie/:movieId" element={<MovieDetailPage />}></Route>
+            <Route path="/:type/:movieId" element={<MovieDetailPage />}></Route>
             <Route path="/celebs/:nconst" element={<CelebDetailPage />} /> 
+            <Route path="/series" element={<SeriesPage />} />
+            <Route path="/shorts" element={<ShortsPage />} />
+            <Route path="/all" element={<AllPage />} />
+            {/* Add more routes as needed */}
           </Routes>
         </main>
 

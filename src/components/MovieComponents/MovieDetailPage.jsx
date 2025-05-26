@@ -52,7 +52,7 @@ const CreditListItem = ({ person, categoryOverride = null }) => (
 const LoadingIndicator = () => (
   <div className="flex flex-col items-center justify-center min-h-[70vh]">
     <CircularProgress style={{ color: '#FBBF24' }} />
-    <p className="mt-4 text-text-secondary-light dark:text-text-secondary-dark text-lg">Loading movie details...</p>
+    <p className="mt-4 text-text-secondary-light dark:text-text-secondary-dark text-lg">Loading details...</p>
   </div>
 );
 
@@ -75,7 +75,8 @@ const MovieDetailPage = () => {
       // *** THIS IS THE API CALL YOU NEED TO ENSURE YOUR BACKEND PROVIDES ***
       // It should return a SINGLE movie object with a 'principals' array.
       console.log('hi')
-      const response = await fetch(`${API_BASE_URL}/api_movie_details.php?id=${movieId}`);
+      
+      const response = await fetch(`${API_BASE_URL}/api_title_details.php?id=${movieId}`);
   
       if (!response.ok) {
         let errorText = `API Error (${response.status})`;

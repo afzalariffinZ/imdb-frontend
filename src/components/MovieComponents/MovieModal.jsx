@@ -94,7 +94,7 @@ const SimplePaginationControls = ({ currentPage, totalPages, onPageChange, class
 // --- End Simple Pagination Controls Component ---
 
 
-const MovieModal = ({ movie: movieProp, onClose }) => {
+const MovieModal = ({ movie: movieProp, onClose , type = 'movie'}) => {
   const movie = movieProp;
   const modalDialogRef = useRef(null);
 
@@ -167,7 +167,7 @@ const MovieModal = ({ movie: movieProp, onClose }) => {
           <h2 id={modalId} className="text-lg sm:text-xl md:text-2xl font-bold truncate pr-2">
             {movieId ? (
               <Link
-                to={`/movie/${movieId}`} // Adjust this path based on your actual movie detail route
+                to={`/${type}/${movieId}`} // Adjust this path based on your actual movie detail route
                 className="text-primary-yellow hover:underline focus:outline-none focus:ring-1 focus:ring-primary-yellow rounded"
                 onClick={onClose} // Close the current modal when navigating
               >

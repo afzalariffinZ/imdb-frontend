@@ -1,7 +1,7 @@
 // src/components/SearchBar.jsx
 import React, { useState } from 'react';
 
-const SearchBar = ({ onSearch, initialTerm = '' }) => {
+const SearchBar = ({ onSearch, initialTerm = '', type = 'movies' }) => {
   const [term, setTerm] = useState(initialTerm);
 
   const handleSubmit = (e) => {
@@ -16,7 +16,7 @@ const SearchBar = ({ onSearch, initialTerm = '' }) => {
           type="search"
           value={term}
           onChange={(e) => setTerm(e.target.value)}
-          placeholder="Search for movies..."
+          placeholder={`Search for ${type}...`}
           className="flex-grow p-3 md:p-4 text-base md:text-lg themed-text placeholder-theme-medium-gray bg-transparent focus:outline-none"
         />
         <button
