@@ -1,6 +1,7 @@
 // src/components/MovieModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { Link } from 'react-router-dom';
 
 const DEFAULT_MOVIE_PLACEHOLDER_IMAGE = 'https://via.placeholder.com/600x900.png?text=No+Poster';
 const DEFAULT_PERSON_PLACEHOLDER_IMAGE = 'https://via.placeholder.com/100x100.png?text=Person';
@@ -42,7 +43,7 @@ const CreditItem = ({ person, type }) => (
 );
 
 const CastMemberItemVertical = ({ actor }) => (
-   <a
+  <a
     href={`/celebs/${actor.nconst}`}
     className="flex items-center space-x-3 hover:bg-surface-light dark:hover:bg-surface-dark p-2 rounded-md transition-colors w-full"
     target="_blank" rel="noopener noreferrer"
@@ -124,6 +125,8 @@ const MovieModal = ({ movie: movieProp, onClose }) => {
 
   if (!movie) return null;
 
+  const movieId = movie.tconst || movie.id;
+
   const moviePosterSrc = movie.posterUrl || movie.image_url || DEFAULT_MOVIE_PLACEHOLDER_IMAGE;
   const directors = movie.principals?.filter(p => p.category === 'director') || [];
   const writers = movie.principals?.filter(p => p.category === 'writer') || [];
@@ -141,7 +144,8 @@ const MovieModal = ({ movie: movieProp, onClose }) => {
     }
   };
   // --- End Logic for Slicing Cast Data ---
-
+  const titleToDisplay = movie.primaryTitle || movie.primary_title || "Untitled Movie";
+  const movieYear = movie.startYear || movie.start_year || 'N/A';
   const modalId = `movie-modal-title-${movie.tconst || movie.id}`;
 
   const modalContentJsx = (
@@ -160,10 +164,20 @@ const MovieModal = ({ movie: movieProp, onClose }) => {
       >
         {/* Header - Unchanged */}
         <div className="flex justify-between items-center p-3 sm:p-4 border-b border-border-light dark:border-border-dark flex-shrink-0">
-          <h2 id={modalId} className="text-lg sm:text-xl md:text-2xl font-bold text-primary-yellow truncate pr-2">
-            {movie.primaryTitle || movie.primary_title || "Untitled Movie"}
+          <h2 id={modalId} className="text-lg sm:text-xl md:text-2xl font-bold truncate pr-2">
+            {movieId ? (
+              <Link
+                to={`/movie/${movieId}`} // Adjust this path based on your actual movie detail route
+                className="text-primary-yellow hover:underline focus:outline-none focus:ring-1 focus:ring-primary-yellow rounded"
+                onClick={onClose} // Close the current modal when navigating
+              >
+                {titleToDisplay}
+              </Link>
+            ) : (
+              <span className="text-primary-yellow">{titleToDisplay}</span> // Fallback if no ID
+            )}
             <span className="text-text-secondary-light dark:text-text-secondary-dark text-base sm:text-lg ml-2 font-normal">
-              ({movie.startYear || movie.start_year || 'N/A'})
+              ({movieYear})
             </span>
           </h2>
           <button
@@ -177,7 +191,7 @@ const MovieModal = ({ movie: movieProp, onClose }) => {
 
         {/* Body - Main container for poster and details */}
         <div className="flex flex-col md:flex-row flex-grow overflow-hidden"> {/* Let children handle scroll */}
-          
+
           {/* Poster Section - Unchanged */}
           <div className="w-full md:w-[280px] lg:w-[320px] xl:w-[360px] flex-shrink-0 bg-black relative order-1 md:order-none">
             <img
@@ -190,18 +204,15 @@ const MovieModal = ({ movie: movieProp, onClose }) => {
 
           {/* Details Section - This section will scroll if content is too tall */}
           <div className="w-full md:flex-1 p-3 sm:p-4 md:p-5 space-y-4 md:space-y-5 overflow-y-auto nice-scrollbar-y order-2 md:order-none">
-            
-            {/* Tagline and Plot - Unchanged */}
-            {movie.tagline && ( <p className="text-md sm:text-lg italic text-text-secondary-light dark:text-text-secondary-dark">"{movie.tagline}"</p> )}
-            {movie.plot && ( <div className="mt-1"> <h4 className="font-semibold text-text-primary-light dark:text-text-primary-dark mb-1 text-base">Plot Summary</h4> <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">{movie.plot}</p> </div> )}
-            
+
+
             {/* Info Box (Rating, Runtime, Genres) - Unchanged */}
             <div className="bg-surface-light dark:bg-surface-dark p-3 sm:p-4 rounded-lg shadow">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
                 <InfoItem label="Rating" value={movie.rating ? `${movie.rating}/10` : 'N/A'} />
                 <InfoItem label="Votes" value={movie.votes ? Number(movie.votes).toLocaleString() : 'N/A'} />
                 <InfoItem label="Runtime" value={movie.runtimeMinutes || movie.runtime_minutes ? `${movie.runtimeMinutes || movie.runtime_minutes} min` : 'N/A'} />
-                <InfoItem label="Genres" value={movie.genres ? (Array.isArray(movie.genres) ? movie.genres.join(', ') : String(movie.genres).replace(/,/g, ', ')) : 'N/A'} className="col-span-2 sm:col-span-3"/>
+                <InfoItem label="Genres" value={movie.genres ? (Array.isArray(movie.genres) ? movie.genres.join(', ') : String(movie.genres).replace(/,/g, ', ')) : 'N/A'} className="col-span-2 sm:col-span-3" />
               </div>
             </div>
 
@@ -230,7 +241,7 @@ const MovieModal = ({ movie: movieProp, onClose }) => {
               <div className="mt-4">
                 <h4 className="font-semibold text-text-primary-light dark:text-text-primary-dark mb-2 text-base sm:text-lg">Cast</h4>
                 <div className="space-y-1"> {/* Container for current page of cast items */}
-                  {paginatedCast.map(actor => <CastMemberItemVertical key={actor.nconst} actor={actor} /> )}
+                  {paginatedCast.map(actor => <CastMemberItemVertical key={actor.nconst} actor={actor} />)}
                 </div>
                 {/* Render pagination controls if there's more than one page of cast */}
                 <SimplePaginationControls

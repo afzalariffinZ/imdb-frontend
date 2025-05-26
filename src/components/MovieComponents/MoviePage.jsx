@@ -192,7 +192,7 @@ const MoviesPage = () => {
   // console.log('MoviesPage isLoading:', isLoading, 'movies.length:', movies.length);
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-8 themed-text z-30">
+    <div className="container mx-auto px-2 sm:px-4 py-8 themed-text z-">
       <h1 className="text-3xl sm:text-4xl font-bold text-center mb-6 sm:mb-8">{pageTitleContent}</h1>
 
       <SearchBar onSearch={handleSearchSubmit} initialTerm={searchTerm} />

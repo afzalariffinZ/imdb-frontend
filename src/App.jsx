@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Import Router components
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
+import CelebsPage from './components/CelebComponents/CelebsPage';
 // import PopularSection from './components/PopularSection'; // PopularSection might be part of HeroSection or its own route
 import MoviesPage from './components/MovieComponents/MoviePage'; // Import the new MoviesPage
 import YourBackgroundGif from './assets/index_background.gif';
+import MovieDetailPage from './components/MovieComponents/MovieDetailPage'; // Import MovieDetailPage
+import CelebDetailPage from './components/CelebComponents/CelebDetailPage';
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -56,7 +59,9 @@ function App() {
               </>
             } />
             <Route path="/movies" element={<MoviesPage />} />
-            {/* Add more routes like /tv, /celebs, /movie/:id etc. later */}
+            <Route path="/celebs" element={<CelebsPage />} /> {/* << ADD CELEBS ROUTE */}
+            <Route path="/movie/:movieId" element={<MovieDetailPage />}></Route>
+            <Route path="/celebs/:nconst" element={<CelebDetailPage />} /> 
           </Routes>
         </main>
 
