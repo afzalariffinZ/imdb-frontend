@@ -1,12 +1,18 @@
-// src/components/FilterBar.jsx (or src/MovieComponents/FilterBar.jsx)
+// src/components/TitleComponents/AllFilterBar.jsx (or a suitable path)
 import React, { useState, useEffect } from 'react';
 
+// These could be imported from a shared constants file
 const GENRE_OPTIONS = [
   "Action", "Adventure", "Animation", "Biography", "Comedy", "Crime",
   "Documentary", "Drama", "Family", "Fantasy", "Film Noir", "History",
   "Horror", "Music", "Musical", "Mystery", "Romance", "Sci-Fi",
   "Short", "Sport", "Superhero", "Thriller", "War", "Western"
-];
+].sort();
+
+const TITLE_TYPE_OPTIONS = [
+    "movie", "short", "tvSeries"
+].sort();
+
 
 const ChevronDownIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -20,42 +26,41 @@ const ChevronUpIcon = () => (
   </svg>
 );
 
-const FilterBar = ({ initialFilters, onApplyFilters }) => {
+const AllFilterBar = ({ initialFilters, onApplyFilters }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   // Internal state for the filter inputs
   const [minRating, setMinRating] = useState('');
   const [maxRating, setMaxRating] = useState('');
-  const [selectedGenres, setSelectedGenres] = useState([]); // Array of strings
+  const [selectedGenres, setSelectedGenres] = useState([]);
   const [startYear, setStartYear] = useState('');
   const [endYear, setEndYear] = useState('');
   const [isAdult, setIsAdult] = useState('any'); // 'any', 'yes', 'no'
+  const [selectedTitleTypes, setSelectedTitleTypes] = useState([]);
 
-  // Effect to update internal state when initialFilters (from URL/parent) change
   useEffect(() => {
     setMinRating(initialFilters.minRating || '');
     setMaxRating(initialFilters.maxRating || '');
-    setSelectedGenres(initialFilters.selectedGenres || []); // initialFilters.selectedGenres should be an array
+    setSelectedGenres(initialFilters.selectedGenres || []);
     setStartYear(initialFilters.startYear || '');
     setEndYear(initialFilters.endYear || '');
     setIsAdult(initialFilters.isAdult || 'any');
+    setSelectedTitleTypes(initialFilters.selectedTitleTypes || []);
 
-    // Optionally open the filter bar if any initial filters are actively set
-    const hasActiveFilters = Object.values(initialFilters).some(val => 
+    const hasActiveFilters = Object.values(initialFilters).some(val =>
         val && (Array.isArray(val) ? val.length > 0 : (val !== '' && val !== 'any'))
     );
     if (hasActiveFilters) {
         setIsOpen(true);
     }
-
   }, [initialFilters]);
 
   const handleGenreChange = (genre) => {
-    setSelectedGenres(prevGenres =>
-      prevGenres.includes(genre)
-        ? prevGenres.filter(g => g !== genre)
-        : [...prevGenres, genre]
-    );
+    setSelectedGenres(prev => prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]);
+  };
+
+  const handleTitleTypeChange = (type) => {
+    setSelectedTitleTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
   };
 
   const handleSubmit = (e) => {
@@ -63,14 +68,14 @@ const FilterBar = ({ initialFilters, onApplyFilters }) => {
     onApplyFilters({
       minRating: minRating ? parseFloat(minRating) : undefined,
       maxRating: maxRating ? parseFloat(maxRating) : undefined,
-      // Pass the comma-separated string for 'genres' to the parent
       genres: selectedGenres.length > 0 ? selectedGenres.join(',') : undefined,
       startYear: startYear ? parseInt(startYear, 10) : undefined,
       endYear: endYear ? parseInt(endYear, 10) : undefined,
       isAdult: isAdult === 'any' ? undefined : (isAdult === 'yes' ? '1' : '0'),
+      titleTypes: selectedTitleTypes.length > 0 ? selectedTitleTypes.join(',') : undefined,
     });
   };
-  
+
   const handleResetFilters = () => {
     setMinRating('');
     setMaxRating('');
@@ -78,10 +83,10 @@ const FilterBar = ({ initialFilters, onApplyFilters }) => {
     setStartYear('');
     setEndYear('');
     setIsAdult('any');
-    // Call onApplyFilters with all undefined to clear them in parent and URL
+    setSelectedTitleTypes([]);
     onApplyFilters({
         minRating: undefined, maxRating: undefined, genres: undefined,
-        startYear: undefined, endYear: undefined, isAdult: undefined,
+        startYear: undefined, endYear: undefined, isAdult: undefined, titleTypes: undefined,
     });
   };
 
@@ -91,7 +96,7 @@ const FilterBar = ({ initialFilters, onApplyFilters }) => {
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex justify-between items-center p-3 bg-surface-light dark:bg-surface-dark rounded-t-lg shadow hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-yellow"
         aria-expanded={isOpen}
-        aria-controls="filter-options-content"
+        aria-controls="all-filter-options-content"
       >
         <h3 className="text-md font-semibold">
           Filters
@@ -100,12 +105,12 @@ const FilterBar = ({ initialFilters, onApplyFilters }) => {
       </button>
 
       {isOpen && (
-        <form 
-            id="filter-options-content"
-            onSubmit={handleSubmit} 
+        <form
+            id="all-filter-options-content"
+            onSubmit={handleSubmit}
             className="p-4 bg-surface-light dark:bg-surface-dark rounded-b-lg shadow border-x border-b border-border-light dark:border-border-dark"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-5 items-end">
             {/* Rating Range */}
             <div>
               <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">Rating</label>
@@ -125,25 +130,38 @@ const FilterBar = ({ initialFilters, onApplyFilters }) => {
                 <input type="number" min="1800" max={new Date().getFullYear() + 5} placeholder="To (YYYY)" value={endYear} onChange={(e) => setEndYear(e.target.value)} className="w-full p-2 text-sm rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary-yellow focus:border-primary-yellow"/>
               </div>
             </div>
-            
+
             {/* Is Adult */}
             <div>
-              <label htmlFor="isAdult" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">Adult Content</label>
-              <select id="isAdult" value={isAdult} onChange={(e) => setIsAdult(e.target.value)} className="w-full p-2 text-sm rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary-yellow focus:border-primary-yellow h-[42px]"> {/* Match height of inputs */}
+              <label htmlFor="isAdultAll" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">Adult Content</label>
+              <select id="isAdultAll" value={isAdult} onChange={(e) => setIsAdult(e.target.value)} className="w-full p-2 text-sm rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary-yellow focus:border-primary-yellow h-[42px]">
                 <option value="any">Any</option>
                 <option value="no">No (Not Adult)</option>
                 <option value="yes">Yes (Adult)</option>
               </select>
             </div>
 
-            {/* Genre - Multiple Select (checkboxes) */}
-            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4"> {/* Span full width */}
+            {/* Genres - Multiple Select */}
+            <div className="col-span-1 sm:col-span-2 md:col-span-3">
               <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">Genres</label>
               <div className="max-h-32 overflow-y-auto border border-border-light dark:border-border-dark rounded-md p-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-2 gap-y-1 nice-scrollbar-y">
                 {GENRE_OPTIONS.map(genre => (
                   <label key={genre} className="flex items-center space-x-1.5 text-sm cursor-pointer hover:bg-background-light dark:hover:bg-background-dark p-1 rounded select-none">
                     <input type="checkbox" checked={selectedGenres.includes(genre)} onChange={() => handleGenreChange(genre)} className="form-checkbox h-3.5 w-3.5 text-primary-yellow bg-transparent border-border-light dark:border-border-dark focus:ring-primary-yellow rounded-sm"/>
                     <span>{genre}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            
+            {/* Title Types - Multiple Select */}
+            <div className="col-span-1 sm:col-span-2 md:col-span-3">
+              <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">Title Types</label>
+              <div className="max-h-32 overflow-y-auto border border-border-light dark:border-border-dark rounded-md p-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-2 gap-y-1 nice-scrollbar-y">
+                {TITLE_TYPE_OPTIONS.map(type => (
+                  <label key={type} className="flex items-center space-x-1.5 text-sm cursor-pointer hover:bg-background-light dark:hover:bg-background-dark p-1 rounded select-none">
+                    <input type="checkbox" checked={selectedTitleTypes.includes(type)} onChange={() => handleTitleTypeChange(type)} className="form-checkbox h-3.5 w-3.5 text-primary-yellow bg-transparent border-border-light dark:border-border-dark focus:ring-primary-yellow rounded-sm"/>
+                    <span>{type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span> {/* Format for display e.g. tvSeries -> Tv Series */}
                   </label>
                 ))}
               </div>
@@ -164,4 +182,4 @@ const FilterBar = ({ initialFilters, onApplyFilters }) => {
   );
 };
 
-export default FilterBar;
+export default AllFilterBar;

@@ -1,16 +1,17 @@
-// src/pages/MoviesPage.jsx
+// src/pages/AllPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom'; // Make sure this is imported
-import MovieCard from '../components/MovieComponents/MovieCard'; // Adjust path if MovieCard is elsewhere
+import { useSearchParams } from 'react-router-dom';
+import MovieCard from '../components/MovieComponents/MovieCard';
 import MovieModal from '../components/MovieComponents/MovieModal';
 import SearchBar from '../components/MovieComponents/SearchBar';
 import Pagination from '../components/MovieComponents/Pagination';
-import CircularProgress from '@mui/material/CircularProgress'; // MUI Spinner
+import AllFilterBar from './AllFilterBar'; // IMPORT THE NEW FILTER BAR
+import CircularProgress from '@mui/material/CircularProgress';
 
-// --- Constants ---
-const MOVIES_PER_PAGE = 8;
-const API_BASE_URL = 'http://localhost:3000'; // Your PHP API base URL
+const ITEMS_PER_PAGE = 8; // Changed from MOVIES_PER_PAGE
+const API_BASE_URL = 'http://localhost:3000';
 
+// generateFakePrincipalsForModal can remain the same if MovieModal expects it
 const generateFakePrincipalsForModal = (movieIndex) => {
   const principals = [];
   const directorNconst = `nm${7000000 + movieIndex}d`;
@@ -35,195 +36,281 @@ const generateFakePrincipalsForModal = (movieIndex) => {
   return principals;
 };
 
-// --- Loading Indicator Component ---
+
 const LoadingIndicator = () => (
   <div className="flex flex-col items-center justify-center py-20">
-    <CircularProgress style={{ color: '#FBBF24' }} /> {/* Example color (Tailwind yellow-500) */}
+    <CircularProgress style={{ color: '#FBBF24' }} />
     <p className="mt-4 themed-text-secondary text-lg">Loading...</p>
   </div>
 );
 
 const AllPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialUrlSearchTerm = searchParams.get('title') || '';
 
-  const [movies, setMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); // Start true for initial load
+  const parseStateFromURL = useCallback(() => {
+    const title = searchParams.get('title') || ''; // 'title' is common for movie/item search
+    const page = parseInt(searchParams.get('page'), 10) || 1;
+    const genresParam = searchParams.get('genres');
+    const minRatingParam = searchParams.get('minRating') || '';
+    const maxRatingParam = searchParams.get('maxRating') || '';
+    const startYearParam = searchParams.get('startYear') || '';
+    const endYearParam = searchParams.get('endYear') || '';
+    const isAdultParam = searchParams.get('isAdult'); // '0', '1', or null
+    const titleTypesParam = searchParams.get('titleTypes');
+
+
+    let isAdultStateValue = 'any';
+    if (isAdultParam === '1') isAdultStateValue = 'yes';
+    else if (isAdultParam === '0') isAdultStateValue = 'no';
+
+    return {
+      searchTerm: title,
+      currentPage: page,
+      filters: {
+        minRating: minRatingParam,
+        maxRating: maxRatingParam,
+        selectedGenres: genresParam ? genresParam.split(',').filter(g => g && g.trim() !== '') : [],
+        startYear: startYearParam,
+        endYear: endYearParam,
+        isAdult: isAdultStateValue,
+        selectedTitleTypes: titleTypesParam ? titleTypesParam.split(',').filter(t => t && t.trim() !== '') : [],
+      }
+    };
+  }, [searchParams]);
+
+  const initialParsedState = React.useMemo(() => parseStateFromURL(), [parseStateFromURL]);
+
+  const [items, setItems] = useState([]); // Changed from movies to items
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalMovieCount, setTotalMovieCount] = useState(0);
-  const [searchTerm, setSearchTerm] = useState(initialUrlSearchTerm);
-  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [totalItemCount, setTotalItemCount] = useState(0); // Changed from totalMovieCount
+  const [selectedItem, setSelectedItem] = useState(null); // Changed from selectedMovie
   const [fakeIndexCounter, setFakeIndexCounter] = useState(0);
 
-  const totalPages = Math.ceil(totalMovieCount / MOVIES_PER_PAGE);
+  const [searchTerm, setSearchTerm] = useState(initialParsedState.searchTerm);
+  const [currentPage, setCurrentPage] = useState(initialParsedState.currentPage);
+  const [filters, setFilters] = useState(initialParsedState.filters);
 
-  console.log('movies lengthm', movies.length)
-  const fetchMoviesList = useCallback(async (isNewSearchOrPage = false) => {
-    if (isNewSearchOrPage) {
-        setMovies([]); // Clear previous movies immediately for a new search/page
+  const totalPages = Math.ceil(totalItemCount / ITEMS_PER_PAGE);
+
+  const updateURL = useCallback((newValues = {}) => {
+    const params = new URLSearchParams();
+
+    const finalSearchTerm = newValues.searchTerm !== undefined ? newValues.searchTerm : searchTerm;
+    const finalCurrentPage = newValues.currentPage !== undefined ? Number(newValues.currentPage) : currentPage;
+    const sourceFilters = newValues.filters !== undefined ? newValues.filters : filters;
+
+    if (finalSearchTerm) params.set('title', finalSearchTerm); // Keep 'title' for consistency with API search param
+    if (finalCurrentPage > 1) params.set('page', finalCurrentPage.toString());
+
+    if (sourceFilters.minRating) params.set('minRating', sourceFilters.minRating);
+    if (sourceFilters.maxRating) params.set('maxRating', sourceFilters.maxRating);
+    if (sourceFilters.selectedGenres && sourceFilters.selectedGenres.length > 0) {
+      params.set('genres', sourceFilters.selectedGenres.join(','));
     }
+    if (sourceFilters.startYear) params.set('startYear', sourceFilters.startYear);
+    if (sourceFilters.endYear) params.set('endYear', sourceFilters.endYear);
+    if (sourceFilters.isAdult && sourceFilters.isAdult !== 'any') {
+      params.set('isAdult', sourceFilters.isAdult === 'yes' ? '1' : '0');
+    }
+    if (sourceFilters.selectedTitleTypes && sourceFilters.selectedTitleTypes.length > 0) {
+      params.set('titleTypes', sourceFilters.selectedTitleTypes.join(','));
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [searchTerm, currentPage, filters, setSearchParams]);
+
+
+  useEffect(() => {
+    const { searchTerm: urlSearchTerm, currentPage: urlPage, filters: urlFilters } = parseStateFromURL();
+    if (urlSearchTerm !== searchTerm) setSearchTerm(urlSearchTerm);
+    if (urlPage !== currentPage) setCurrentPage(urlPage);
+    if (JSON.stringify(urlFilters) !== JSON.stringify(filters)) {
+        setFilters(urlFilters);
+    }
+  }, [searchParams, parseStateFromURL, searchTerm, currentPage, filters]);
+
+
+  const fetchItemsList = useCallback(async () => {
+    console.log("FETCHING ALL ITEMS with state:", { currentPage, searchTerm, filters });
+    setItems([]);
     setIsLoading(true);
     setError(null);
-    // setMovies([]); // MOVED: Set this earlier if isNewSearchOrPage is true
 
     try {
-      const offset = (currentPage - 1) * MOVIES_PER_PAGE;
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
       const queryParams = new URLSearchParams({
-        limit: MOVIES_PER_PAGE.toString(),
+        limit: ITEMS_PER_PAGE.toString(),
         offset: offset.toString(),
       });
-      if (searchTerm) queryParams.append('search', searchTerm);
+      if (searchTerm) queryParams.append('search', searchTerm); // 'search' is used by api_all.php
 
+      // Add filters
+      if (filters.minRating) queryParams.append('minRating', filters.minRating);
+      if (filters.maxRating) queryParams.append('maxRating', filters.maxRating);
+      if (filters.selectedGenres && filters.selectedGenres.length > 0) {
+        queryParams.append('genres', filters.selectedGenres.join(','));
+      }
+      if (filters.startYear) queryParams.append('startYear', filters.startYear);
+      if (filters.endYear) queryParams.append('endYear', filters.endYear);
+      if (filters.isAdult && filters.isAdult !== 'any') {
+        queryParams.append('isAdult', filters.isAdult === 'yes' ? '1' : '0');
+      }
+      if (filters.selectedTitleTypes && filters.selectedTitleTypes.length > 0) {
+        queryParams.append('titleTypes', filters.selectedTitleTypes.join(','));
+      }
+
+      console.log("AllPage API Call Params:", queryParams.toString());
       const response = await fetch(`${API_BASE_URL}/api_all.php?${queryParams.toString()}`);
 
       if (!response.ok) {
         let errorText = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorText = errorData.error || errorText;
-        } catch (e) {
-          const textError = await response.text();
-          errorText = `${errorText} - ${textError.substring(0, 200)}`;
-        }
+        try { const errorData = await response.json(); errorText = errorData.error || errorText; }
+        catch (e) { const textError = await response.text(); errorText = `${errorText} - ${textError.substring(0, 200)}`; }
         throw new Error(errorText);
       }
 
       const data = await response.json();
-      setMovies(Array.isArray(data.movies) ? data.movies : []);
-      setTotalMovieCount(data.totalCount || 0);
+      if(data.error) throw new Error(data.error);
+
+      setItems(Array.isArray(data.items) ? data.items : []); // Expect 'items' from api_all.php
+      setTotalItemCount(data.totalCount || 0);
 
     } catch (e) {
       setError(e.message);
-      console.error("Failed to fetch movies list:", e);
-      setMovies([]); // Ensure movies are cleared on error
-      setTotalMovieCount(0);
+      console.error("Failed to fetch items list:", e);
+      setItems([]);
+      setTotalItemCount(0);
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, searchTerm]); // Dependencies for useCallback
+  }, [currentPage, searchTerm, filters]);
 
-  // Effect for initial load and when currentPage or searchTerm changes
   useEffect(() => {
-    fetchMoviesList(true); // Pass true to indicate it's a new fetch that should clear old results
-  }, [currentPage, searchTerm, fetchMoviesList]); // Add fetchMoviesList to dependencies
+    fetchItemsList();
+  }, [fetchItemsList]);
 
-  // Effect to sync URL 'title' param with local searchTerm state
-  useEffect(() => {
-    const urlSearch = searchParams.get('title') || '';
-    if (urlSearch !== searchTerm) {
-      setSearchTerm(urlSearch);
-      // setCurrentPage(1); // This will be handled by the main useEffect when searchTerm changes
-    }
-  }, [searchParams]); // Removed searchTerm from deps here to avoid loop, handled by main effect
 
   const handleSearchSubmit = (newTerm) => {
-    // If the new term is different, update searchParams, which will trigger useEffects
-    if (newTerm !== searchTerm) {
-        setCurrentPage(1); // Reset to page 1 for a new search
-        setSearchTerm(newTerm); // Update local state immediately
-        if (newTerm) {
-            setSearchParams({ title: newTerm, page: '1' }); // Update URL
-        } else {
-            setSearchParams({ page: '1' }); // Clear title, keep page
-        }
-    } else if (!newTerm && searchTerm) { // Clearing an existing search
-        setSearchTerm('');
-        setCurrentPage(1);
-        setSearchParams({ page: '1' });
-    }
+    updateURL({ searchTerm: newTerm, currentPage: 1 });
+  };
+
+  const handleApplyAllFilters = (appliedFiltersFromBar) => {
+    // appliedFiltersFromBar: { minRating, maxRating, genres (string), startYear, endYear, isAdult ('0'/'1'), titleTypes (string) }
+    let newIsAdultStateValue = 'any';
+    if (appliedFiltersFromBar.isAdult === '1') newIsAdultStateValue = 'yes';
+    else if (appliedFiltersFromBar.isAdult === '0') newIsAdultStateValue = 'no';
+
+    updateURL({
+      filters: {
+        minRating: appliedFiltersFromBar.minRating ? String(appliedFiltersFromBar.minRating) : '',
+        maxRating: appliedFiltersFromBar.maxRating ? String(appliedFiltersFromBar.maxRating) : '',
+        selectedGenres: appliedFiltersFromBar.genres ? appliedFiltersFromBar.genres.split(',').filter(g => g) : [],
+        startYear: appliedFiltersFromBar.startYear ? String(appliedFiltersFromBar.startYear) : '',
+        endYear: appliedFiltersFromBar.endYear ? String(appliedFiltersFromBar.endYear) : '',
+        isAdult: newIsAdultStateValue,
+        selectedTitleTypes: appliedFiltersFromBar.titleTypes ? appliedFiltersFromBar.titleTypes.split(',').filter(t => t) : [],
+      },
+      currentPage: 1
+    });
   };
 
   const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages && page !== currentPage) {
-      setCurrentPage(page);
-      // Update URL to reflect page change
-      const currentSearchParams = new URLSearchParams(searchParams.toString());
-      currentSearchParams.set('page', page.toString());
-      setSearchParams(currentSearchParams);
-    }
+    updateURL({ currentPage: page });
   };
 
-  // Effect to sync currentPage with URL 'page' param (if you want page in URL)
-  useEffect(() => {
-    const pageFromUrl = parseInt(searchParams.get('page'), 10) || 1;
-    if (pageFromUrl !== currentPage) {
-        setCurrentPage(pageFromUrl);
-    }
-  }, [searchParams]);
-
-
-  const handleOpenMovieModal = (movieFromCard) => {
+  const handleOpenItemModal = (item) => { // Renamed from handleOpenMovieModal
     const currentFakeIndex = fakeIndexCounter;
     setFakeIndexCounter(prev => prev + 1);
-    const movieForModal = {
-      ...movieFromCard,
-      plot: movieFromCard.plot || `This is a placeholder plot for ${movieFromCard.primaryTitle}.`,
-      tagline: movieFromCard.tagline || `A gripping tagline for ${movieFromCard.primaryTitle}!`,
-      principals: generateFakePrincipalsForModal(currentFakeIndex),
+    const itemForModal = {
+      ...item,
+      plot: item.plot || `This is a placeholder plot for ${item.primaryTitle || item.primary_title}.`,
+      tagline: item.tagline || `A gripping tagline for ${item.primaryTitle || item.primary_title}!`,
+      principals: generateFakePrincipalsForModal(currentFakeIndex), // Assuming MovieModal can handle this
     };
-    setSelectedMovie(movieForModal);
+    setSelectedItem(itemForModal); // Renamed
   };
 
-  const handleCloseMovieModal = () => {
-    setSelectedMovie(null);
-  };
+  const handleCloseItemModal = () => setSelectedItem(null); // Renamed
+
 
   useEffect(() => {
-    if (selectedMovie) {
-      document.title = `${selectedMovie.primaryTitle} - Movie Details - IMDb2`;
+    const itemTitle = selectedItem?.primaryTitle || selectedItem?.primary_title;
+    if (selectedItem && itemTitle) {
+      document.title = `${itemTitle} - Details - IMDb2`;
     } else if (searchTerm) {
       document.title = `Search: ${searchTerm} - IMDb2`;
+    } else {
+      let filterText = '';
+      if (filters && Object.values(filters).some(f => f && (Array.isArray(f) ? f.length > 0 : (f !== '' && f !== 'any')))) {
+          filterText = " (Filtered)";
+      }
+      document.title = `Browse All Items${filterText} - IMDb2`;
     }
-     else {
-      document.title = `Browse Movies - IMDb2`;
-    }
-  }, [selectedMovie, searchTerm]);
+  }, [selectedItem, searchTerm, filters]);
+
 
   let pageTitleContent;
   if (searchTerm && !isLoading) {
-    pageTitleContent = <>Results for "<strong>{searchTerm}</strong>" ({totalMovieCount} found)</>;
+    pageTitleContent = <>Results for "<strong>{searchTerm}</strong>" ({totalItemCount} found)</>;
   } else if (searchTerm && isLoading) {
     pageTitleContent = <>Searching for "<strong>{searchTerm}</strong>"...</>;
   } else {
-    pageTitleContent = <>Browse All ({totalMovieCount > 0 ? totalMovieCount : isLoading ? '' : '0'} total)</>;
+    let filterText = '';
+    if (filters && Object.values(filters).some(f => f && (Array.isArray(f) ? f.length > 0 : (f !== '' && f !== 'any')))) {
+        filterText = " (Filtered)";
+    }
+    pageTitleContent = <>Browse All Items{filterText} ({isLoading ? '...' : (totalItemCount || 0)} total)</>;
   }
-  
-  // console.log('MoviesPage isLoading:', isLoading, 'movies.length:', movies.length);
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-8 themed-text z-">
+    <div className="container mx-auto px-2 sm:px-4 py-8 themed-text">
       <h1 className="text-3xl sm:text-4xl font-bold text-center mb-6 sm:mb-8">{pageTitleContent}</h1>
 
       <SearchBar onSearch={handleSearchSubmit} initialTerm={searchTerm} type='all'/>
 
-      {isLoading && <LoadingIndicator /> /* Show loader WHENEVER isLoading is true */}
-      
+      <AllFilterBar
+        initialFilters={{
+            minRating: filters.minRating,
+            maxRating: filters.maxRating,
+            selectedGenres: filters.selectedGenres || [],
+            startYear: filters.startYear,
+            endYear: filters.endYear,
+            isAdult: filters.isAdult, // 'any', 'yes', 'no'
+            selectedTitleTypes: filters.selectedTitleTypes || [],
+        }}
+        onApplyFilters={handleApplyAllFilters}
+      />
+
+      {isLoading && <LoadingIndicator />}
+
       {!isLoading && error && (
         <div className="text-center my-4 p-4 bg-red-900 bg-opacity-50 border border-red-700 text-red-300 rounded-md" role="alert">
           <strong className="font-bold">Error!</strong>
           <span className="block sm:inline"> {error}</span>
         </div>
       )}
-      {!isLoading && !error && movies.length === 0 && (
+      {!isLoading && !error && items.length === 0 && totalItemCount === 0 && (
         <div className="text-center my-4 p-4 bg-blue-900 bg-opacity-50 border border-blue-700 text-blue-300 rounded-md" role="alert">
-          {searchTerm ? `No titles found matching "${searchTerm}".` : "No titles to display."}
+          {searchTerm || Object.values(filters).some(f => f && (Array.isArray(f) ? f.length > 0 : (f !== '' && f !== 'any')))
+            ? `No items found matching your criteria.`
+            : "No items to display."}
         </div>
       )}
 
-      {!isLoading && movies.length > 0 && ( // Only show movie grid if not loading and movies exist
+      {!isLoading && !error && items.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
-          {movies.map((movie, index) => (
-            <MovieCard
-              key={movie.id || movie.tconst || `movie-${index}`}
-              movie={movie}
-              onCardClick={() => handleOpenMovieModal(movie)}
+          {items.map((item, index) => ( // items instead of movies
+            <MovieCard // Assuming MovieCard can display generic item data if structure is similar
+              key={item.id || item.tconst || `item-${index}`}
+              movie={item} // Pass item as movie prop, MovieCard needs to be flexible
+              onCardClick={() => handleOpenItemModal(item)}
             />
           ))}
         </div>
       )}
 
-      {!isLoading && totalPages > 1 && !error && !selectedMovie && (
+      {!isLoading && !error && totalPages > 1 && !selectedItem && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -231,8 +318,8 @@ const AllPage = () => {
         />
       )}
 
-      {selectedMovie && (
-        <MovieModal movie={selectedMovie} onClose={handleCloseMovieModal} type={"all"} />
+      {selectedItem && ( // Assuming MovieModal can be used for generic items too
+        <MovieModal movie={selectedItem} onClose={handleCloseItemModal} type={"all"} />
       )}
 
       <footer className="text-center py-10 mt-10 border-t themed-border-color">

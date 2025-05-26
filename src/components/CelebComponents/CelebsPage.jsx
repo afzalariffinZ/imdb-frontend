@@ -1,14 +1,15 @@
 // src/pages/CelebsPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import CelebCard from '../CelebComponents/CelebCard'; // Adjust path if CelebCard is elsewhere
-import SearchBar from '../MovieComponents/SearchBar';   // Assuming SearchBar is in src/components
-import Pagination from '../MovieComponents/Pagination'; // Assuming Pagination is in src/components
+import CelebCard from '../CelebComponents/CelebCard';
+import SearchBar from '../MovieComponents/SearchBar';
+import Pagination from '../MovieComponents/Pagination';
+import CelebFilterBar from '../CelebComponents/CelebFilterBar'; // Import the new filter bar
 import CircularProgress from '@mui/material/CircularProgress';
-import CelebModal from '../CelebComponents/CelebModal'; 
+import CelebModal from '../CelebComponents/CelebModal';
 
-const CELEBS_PER_PAGE = 12; // Adjust as needed, e.g., for a 4-column layout 12 or 16
-const API_BASE_URL = 'http://localhost:3000'; // Your PHP API base URL
+const CELEBS_PER_PAGE = 12;
+const API_BASE_URL = 'http://localhost:3000';
 
 const LoadingIndicator = () => (
   <div className="flex flex-col items-center justify-center py-20">
@@ -17,44 +18,79 @@ const LoadingIndicator = () => (
   </div>
 );
 
-// You might want a CelebModal similar to MovieModal if you plan to show details
-
-
 const CelebsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const getInitialStateFromURL = useCallback(() => {
-    const search = searchParams.get('search') || ''; // Use 'search' to match API
+  // Helper to parse all relevant state from URL
+  const parseStateFromURL = useCallback(() => {
+    const search = searchParams.get('search') || '';
     const page = parseInt(searchParams.get('page'), 10) || 1;
-    return { search, page };
+    const professionsParam = searchParams.get('professions'); // Comma-separated string
+    const birthYearStartParam = searchParams.get('birthYearStart') || '';
+    const birthYearEndParam = searchParams.get('birthYearEnd') || '';
+
+    return {
+      searchTerm: search,
+      currentPage: page,
+      filters: {
+        selectedProfessions: professionsParam ? professionsParam.split(',').filter(p => p && p.trim() !== '') : [],
+        birthYearStart: birthYearStartParam,
+        birthYearEnd: birthYearEndParam,
+      }
+    };
   }, [searchParams]);
 
-  const initialState = getInitialStateFromURL();
+  // Initialize state ONCE based on the initial URL
+  const initialParsedState = React.useMemo(() => parseStateFromURL(), [parseStateFromURL]);
 
   const [celebs, setCelebs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(initialState.page);
   const [totalCelebCount, setTotalCelebCount] = useState(0);
-  const [searchTerm, setSearchTerm] = useState(initialState.search);
-  const [selectedCeleb, setSelectedCeleb] = useState(null); // For a potential modal
+  const [selectedCeleb, setSelectedCeleb] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState(initialParsedState.searchTerm);
+  const [currentPage, setCurrentPage] = useState(initialParsedState.currentPage);
+  const [filters, setFilters] = useState(initialParsedState.filters);
+
 
   const totalPages = Math.ceil(totalCelebCount / CELEBS_PER_PAGE);
 
-  const updateURLParams = useCallback((newValues) => {
+  // Function to update URL search params intelligently
+  const updateURL = useCallback((newValues = {}) => {
     const params = new URLSearchParams();
-    const currentSearch = newValues.search !== undefined ? newValues.search : searchTerm;
-    const currentPageForUrl = newValues.page !== undefined ? parseInt(newValues.page, 10) : currentPage;
 
-    if (currentSearch) params.set('search', currentSearch);
-    if (currentPageForUrl > 1) params.set('page', currentPageForUrl.toString());
-    
+    const finalSearchTerm = newValues.searchTerm !== undefined ? newValues.searchTerm : searchTerm;
+    const finalCurrentPage = newValues.currentPage !== undefined ? Number(newValues.currentPage) : currentPage;
+    const sourceFilters = newValues.filters !== undefined ? newValues.filters : filters;
+
+    if (finalSearchTerm) params.set('search', finalSearchTerm);
+    if (finalCurrentPage > 1) params.set('page', finalCurrentPage.toString());
+
+    if (sourceFilters.birthYearStart) params.set('birthYearStart', sourceFilters.birthYearStart.toString());
+    if (sourceFilters.birthYearEnd) params.set('birthYearEnd', sourceFilters.birthYearEnd.toString());
+    if (sourceFilters.selectedProfessions && sourceFilters.selectedProfessions.length > 0) {
+      params.set('professions', sourceFilters.selectedProfessions.join(','));
+    }
+
     setSearchParams(params, { replace: true });
-  }, [setSearchParams, searchTerm, currentPage]);
+  }, [searchTerm, currentPage, filters, setSearchParams]);
+
+  // Effect to sync local state FROM URL changes
+  useEffect(() => {
+    const { searchTerm: urlSearchTerm, currentPage: urlPage, filters: urlFilters } = parseStateFromURL();
+
+    if (urlSearchTerm !== searchTerm) setSearchTerm(urlSearchTerm);
+    if (urlPage !== currentPage) setCurrentPage(urlPage);
+    if (JSON.stringify(urlFilters) !== JSON.stringify(filters)) {
+        setFilters(urlFilters);
+    }
+  }, [searchParams, parseStateFromURL, searchTerm, currentPage, filters]);
 
 
-  const fetchCelebsList = useCallback(async (isNewFetch = false) => {
-    if (isNewFetch) setCelebs([]);
+  const fetchCelebsList = useCallback(async () => {
+    console.log("FETCHING CELEBS with state:", { currentPage, searchTerm, filters });
+    setCelebs([]);
     setIsLoading(true);
     setError(null);
     try {
@@ -63,8 +99,15 @@ const CelebsPage = () => {
         limit: CELEBS_PER_PAGE.toString(),
         offset: offset.toString(),
       });
-      if (searchTerm) queryParams.append('search', searchTerm); // API expects 'search'
 
+      if (searchTerm) queryParams.append('search', searchTerm);
+      if (filters.birthYearStart) queryParams.append('birthYearStart', filters.birthYearStart);
+      if (filters.birthYearEnd) queryParams.append('birthYearEnd', filters.birthYearEnd);
+      if (filters.selectedProfessions && filters.selectedProfessions.length > 0) {
+        queryParams.append('professions', filters.selectedProfessions.join(','));
+      }
+
+      console.log("Celeb API Call Params:", queryParams.toString());
       const response = await fetch(`${API_BASE_URL}/api_celebs.php?${queryParams.toString()}`);
       if (!response.ok) {
         let errorText = `API Error (${response.status})`;
@@ -85,48 +128,36 @@ const CelebsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, searchTerm]);
-
-  const handleOpenCelebModal = (celeb) => {
-    // In a real app, you might fetch more detailed celeb data here if needed
-    // For now, we'll use the data already fetched in the list
-    // The `celeb` object from the list API should have:
-    // nconst, primaryName, birthYear, deathYear, imageUrl, professions (array), titlesAssociated (array)
-    setSelectedCeleb(celeb);
-  };
-
-  const handleCloseCelebModal = () => {
-    setSelectedCeleb(null);
-  };
+  }, [currentPage, searchTerm, filters]);
 
 
   useEffect(() => {
-    const { search: urlSearch, page: urlPage } = getInitialStateFromURL();
-    if (urlSearch !== searchTerm) setSearchTerm(urlSearch);
-    if (urlPage !== currentPage) setCurrentPage(urlPage);
-  }, [searchParams, getInitialStateFromURL]); // Removed searchTerm, currentPage from deps
-
-
-  useEffect(() => {
-    fetchCelebsList(true); // isNewFetch = true
-  }, [currentPage, searchTerm, fetchCelebsList]);
+    fetchCelebsList();
+  }, [fetchCelebsList]);
 
 
   const handleSearchSubmit = (newTerm) => {
-    updateURLParams({ search: newTerm, page: '1' });
+    updateURL({ searchTerm: newTerm, currentPage: 1 });
+  };
+
+  const handleApplyCelebFilters = (appliedFiltersFromBar) => {
+    // appliedFiltersFromBar: { birthYearStart?: number, birthYearEnd?: number, professions?: string (comma-sep) }
+    updateURL({
+      filters: {
+        birthYearStart: appliedFiltersFromBar.birthYearStart ? String(appliedFiltersFromBar.birthYearStart) : '',
+        birthYearEnd: appliedFiltersFromBar.birthYearEnd ? String(appliedFiltersFromBar.birthYearEnd) : '',
+        selectedProfessions: appliedFiltersFromBar.professions ? appliedFiltersFromBar.professions.split(',').filter(p => p) : [],
+      },
+      currentPage: 1
+    });
   };
 
   const handlePageChange = (newPage) => {
-    updateURLParams({ page: newPage.toString() });
+    updateURL({ currentPage: newPage });
   };
 
-  // const handleOpenCelebModal = (celeb) => {
-  //   // Fetch full celeb details if needed, then:
-  //   setSelectedCeleb(celeb);
-  // };
-  // const handleCloseCelebModal = () => {
-  //   setSelectedCeleb(null);
-  // };
+  const handleOpenCelebModal = (celeb) => setSelectedCeleb(celeb);
+  const handleCloseCelebModal = () => setSelectedCeleb(null);
 
   useEffect(() => {
     if (selectedCeleb) {
@@ -134,9 +165,13 @@ const CelebsPage = () => {
     } else if (searchTerm) {
       document.title = `Search Celebs: ${searchTerm} - IMDb2`;
     } else {
-      document.title = `Browse Celebrities - IMDb2`;
+      let filterText = '';
+      if (filters && Object.values(filters).some(f => f && (Array.isArray(f) ? f.length > 0 : f !== ''))) {
+          filterText = " (Filtered)";
+      }
+      document.title = `Browse Celebrities${filterText} - IMDb2`;
     }
-  }, [searchTerm, selectedCeleb]);
+  }, [searchTerm, selectedCeleb, filters]);
 
   let pageTitleContent;
   if (searchTerm && !isLoading) {
@@ -144,41 +179,56 @@ const CelebsPage = () => {
   } else if (searchTerm && isLoading) {
     pageTitleContent = <>Searching for "<strong>{searchTerm}</strong>"...</>;
   } else {
-    pageTitleContent = <>Browse Celebrities ({totalCelebCount > 0 ? totalCelebCount : isLoading ? '' : '0'} total)</>;
+    let filterText = '';
+    if (filters && Object.values(filters).some(f => f && (Array.isArray(f) ? f.length > 0 : f !== ''))) {
+        filterText = " (Filtered)";
+    }
+    pageTitleContent = <>Browse Celebrities{filterText} ({isLoading ? '...' : (totalCelebCount || 0)} total)</>;
   }
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-8 text-text-primary-light dark:text-text-primary-dark">
       <h1 className="text-3xl sm:text-4xl font-bold text-center mb-6 sm:mb-8">{pageTitleContent}</h1>
 
-      <SearchBar onSearch={handleSearchSubmit} initialTerm={searchTerm} />
+      <SearchBar onSearch={handleSearchSubmit} initialTerm={searchTerm} type='celebs' />
+
+      <CelebFilterBar
+        initialFilters={{
+            birthYearStart: filters.birthYearStart,
+            birthYearEnd: filters.birthYearEnd,
+            selectedProfessions: filters.selectedProfessions || [],
+        }}
+        onApplyFilters={handleApplyCelebFilters}
+      />
 
       {isLoading && <LoadingIndicator />}
-      
+
       {!isLoading && error && (
         <div className="text-center my-4 p-4 bg-red-700 bg-opacity-20 border border-red-600 text-red-300 rounded-md" role="alert">
           <strong className="font-bold">Error!</strong><span className="block sm:inline"> {error}</span>
         </div>
       )}
-      {!isLoading && !error && celebs.length === 0 && (
+      {!isLoading && !error && celebs.length === 0 && totalCelebCount === 0 && (
         <div className="text-center my-4 p-4 bg-blue-700 bg-opacity-20 border border-blue-600 text-blue-300 rounded-md" role="alert">
-          {searchTerm ? `No celebrities found matching "${searchTerm}".` : "No celebrities to display."}
+          {searchTerm || Object.values(filters).some(f => f && (Array.isArray(f) ? f.length > 0 : f !== ''))
+            ? `No celebrities found matching your criteria.`
+            : "No celebrities to display."}
         </div>
       )}
 
-      {!isLoading && celebs.length > 0 && (
+      {!isLoading && !error && celebs.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
           {celebs.map((celeb) => (
             <CelebCard
               key={celeb.nconst}
               celeb={celeb}
-              onCardClick={() => {handleOpenCelebModal(celeb)}}
+              onCardClick={() => handleOpenCelebModal(celeb)}
             />
           ))}
         </div>
       )}
 
-      {!isLoading && totalPages > 1 && !error /* && !selectedCeleb */ && (
+      {!isLoading && !error && totalPages > 1 && !selectedCeleb && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
