@@ -9,7 +9,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import CelebModal from '../CelebComponents/CelebModal';
 
 const CELEBS_PER_PAGE = 12;
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:8000';
 
 const LoadingIndicator = () => (
   <div className="flex flex-col items-center justify-center py-20">

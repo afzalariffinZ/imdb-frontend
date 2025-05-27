@@ -9,7 +9,7 @@ import FilterBar from '../components/MovieComponents/FilterBar';
 import CircularProgress from '@mui/material/CircularProgress';
 
 const MOVIES_PER_PAGE = 8;
-const API_BASE_URL = 'http://localhost:3000'; // Your PHP API base URL
+const API_BASE_URL = 'http://localhost:8000'; // Your PHP API base URL
 
 const generateFakePrincipalsForModal = (movieIndex) => {
   const principals = [];

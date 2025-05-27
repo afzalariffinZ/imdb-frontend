@@ -9,7 +9,7 @@ import AllFilterBar from './AllFilterBar'; // IMPORT THE NEW FILTER BAR
 import CircularProgress from '@mui/material/CircularProgress';
 
 const ITEMS_PER_PAGE = 8; // Changed from MOVIES_PER_PAGE
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:8000';
 
 // generateFakePrincipalsForModal can remain the same if MovieModal expects it
 const generateFakePrincipalsForModal = (movieIndex) => {
